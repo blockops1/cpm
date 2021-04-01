@@ -20,7 +20,72 @@ int findExtentWithName(char *name, uint8_t *block0);
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
-bool checkLegalName(char *name);
+bool checkLegalName(char *name) {
+    bool valid = true;
+    //printf("%s\n", name);
+    if (name == NULL) return false;
+    if (strlen(name) != 11) return false;
+    if (name[7] != *".") return false;
+    // check first character 0-9, a-z, A-Z
+    valid = legalCharacter(name[0]);
+    //check other characters 0-9, a-z, A-Z. If a space, rest of name and ext needs to be space
+    int counter = 0;
+    while(valid && counter < 6) {
+        counter++;
+        valid = legalCharacter(name[counter]);
+    }
+    //printf("line 37 %s\n", valid ? "true" : "false");
+    if (counter < 7 && name[counter] == 32) {
+        valid = true;
+        counter++;
+    }
+    bool spaceOnly = valid;
+    //printf("counter: %d\n", counter);
+    //printf("line 40 %s\n", valid ? "true" : "false");
+    while(counter < 6) {
+        counter++;
+        if (name[counter] != 32) spaceOnly = false;
+    }
+    valid = spaceOnly;
+    //printf("counter: %d\n", counter);
+    // counter must be 7 by here, now we check the extension
+    counter++;
+    //printf("line 48 %s\n", valid ? "true" : "false");
+    //printf("counter: %d\n", counter);
+    while(valid && counter < 10) {
+        counter++;
+        valid = legalCharacter(name[counter]);
+    }
+    //printf("line 54 %s\n", valid ? "true" : "false");
+    if (counter < 11 && name[counter] == 32) valid = true;
+    spaceOnly = valid;
+    if (counter == 8 && name[counter] == 32) {
+        spaceOnly = true;
+        while (spaceOnly && counter < 10) {
+            counter++;
+            if (name[counter] != 32) spaceOnly = false;
+        }
+        valid = spaceOnly;
+    }
+    //printf("line 60 %s\n", valid ? "true" : "false");
+    spaceOnly = valid;
+    while(counter < 10) {
+        if (name[counter] != 32) spaceOnly = false;
+        counter++;
+    }
+    valid = spaceOnly;
+    return valid;
+}
+
+// checks if a character is of the legal value 0-9, a-z, A-Z
+bool legalCharacter(char letter) {
+    bool valid = false;
+    //printf("letter value: %d\n", letter);
+    if (letter > 47 && letter < 58) valid = true;
+    if (letter > 64 && letter < 91) valid = true;
+    if (letter > 96 && letter < 123) valid = true;
+    return valid;
+}
 
 // print the file directory to stdout. Each filename should be printed on its own line,
 // with the file size, in base 10, following the name and extension, with one space between
@@ -105,7 +170,7 @@ int trimString(char *word) {
     int size = strlen(word);
     char word2[size];
     for (int i = 0; i < size; i++) {
-        if (!isspace(word[i])) {
+        if (word[i] != 32) {
             word2[i] = word[i];
             //printf("%c", word[i]);
             length++;

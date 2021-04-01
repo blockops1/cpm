@@ -60,9 +60,9 @@ int findExtentWithName(char *name, uint8_t *block0);
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
-bool checkLegalName(char *name); 
+bool checkLegalName(char *);
 
-
+bool legalCharacter(char);
 // print the file directory to stdout. Each filename should be printed on its own line, 
 // with the file size, in base 10, following the name and extension, with one space between
 // the extension and the size. If a file does not have an extension it is acceptable to print
