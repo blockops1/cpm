@@ -3,7 +3,8 @@
 #include "diskSimulator.h"
 #include  <stdbool.h> 
 #include <string.h> 
-#include <stdio.h> 
+#include <stdio.h>
+#include <ctype.h>
 
 #define EXTENT_SIZE 32
 #define BLOCKS_PER_EXTENT 16 
@@ -69,6 +70,13 @@ bool checkLegalName(char *name);
 // extension and a size of 234 bytes. This function returns no error codes, since it should
 // never fail unless something is seriously wrong with the disk 
 void cpmDir(); 
+
+// calculate and return filesize from the directory entry
+int fileSize(DirStructType *);
+
+int fillExtent(DirStructType *, uint8_t *, int);
+
+int trimString(char*);
 
 // error codes for next five functions (not all errors apply to all 5 functions)  
 /* 
