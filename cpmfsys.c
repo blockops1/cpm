@@ -11,7 +11,9 @@ DirStructType *mkDirStruct(int index,uint8_t *e){
     entry_p = &entry;
     //go through the block to fill the entry
     entry.status = e[line];
+    entry.XL = e[line + 12];
     entry.BC = e[line + 13];
+    entry.XH = e[line + 14];
     entry.RC = e[line + 15];
     for (int i = 0; i < 8; i++) {
         entry.name[i] = e[line + 1 + i];
@@ -45,15 +47,15 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e) {
     for (int i = 0; i < 3; i++) {
         nameTest[i + 9] = d->extension[i];
     }
-    printf("Name: %s", nameTest);
+    printf("Name: %s\n", nameTest);
     if (!checkLegalName(nameTest)) {
-        printf("checkLegalNAme failed");
+        printf("checkLegalNAme failed\n");
         return;
     }
     // test valid blocks
     for (int i = 0; i < 32; i++) {
         if (d->blocks[i] < 0 || d->blocks[i] > 0xFF) {
-            printf("illegal block number");
+            printf("illegal block number\n");
             return;
         }
     }

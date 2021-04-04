@@ -21,8 +21,8 @@ void printBuffer(uint8_t buffer[],int size) {
 
 
 int main(int argc, char * argv[]) { 
-  uint8_t buffer1[BLOCK_SIZE],buffer2[BLOCK_SIZE]; 
-  int i; 
+  //uint8_t buffer1[BLOCK_SIZE],buffer2[BLOCK_SIZE];
+  //int i;
   readImage("image1.img"); 
   //makeFreeList(); 
   cpmDir();
@@ -48,20 +48,32 @@ int main(int argc, char * argv[]) {
     printf("%s: ", testname);
     printf("%s\n", checkLegalName(testname) ? "true" : "false");
 
+    DirStructType entry = {0};
+    DirStructType *entry_p = NULL;
+    entry_p = &entry;
+    //go through the block to fill the entry
+    entry.status = 0x01;
+    entry.XL = 0x00;
+    entry.BC = 0x00;
+    entry.XH = 0x00;
+    entry.RC = 0x00;
+    strcpy(entry.name,"testone1");
+    strcpy(entry.extension,"txt");
+    entry.blocks[0] = 0x52;
     uint8_t buffer[1024] = {0};
     uint8_t *buffer_p = NULL;
     buffer_p = (uint8_t * ) & buffer;
     blockRead(buffer_p, 0);
-    int testExtent[32] = {0x01, 0x6d, 0x6f, 0x73, 0x62, 0x73, 0x74, 0x66, 0x31, 0x74, 0x78, 0x74, 0x01, 0x02, 0x03, 0x04, 0xff, 0x0e, 0xfd, 0x0c, 0xfb, 0x0a, 0xf9, 0x08, 0xf7, 0x06, 0xf5, 0x04, 0xf3, 0x02, 0xf1, 0x10};
-    DirStructType *testExtent_p = NULL;
-    testExtent_p = (DirStructType *)&testExtent;
-    writeDirStruct(testExtent_p, 2, buffer_p);
+    writeDirStruct(entry_p,2,buffer_p);
+    cpmDir();
+
   //printFreeList();
   //cpmDelete("shortf.ps");
   //cpmDir();
   //cpmRename("mytestf1.txt","mytest2.tx");
   //fprintf(stdout,"cpmRename return code = %d,\n",cpmRename("mytestf","mytestv2.x")); 
   //cpmDir(); 
-  //printFreeList(); 
+  //printFreeList();
+  //sleep(10);
 }
 
