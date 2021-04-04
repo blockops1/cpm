@@ -8,6 +8,7 @@
 
 #define EXTENT_SIZE 32
 #define BLOCKS_PER_EXTENT 16 
+#define NUM_EXTENTS 16
 #define debugging false
 
 typedef struct dirStruct { 
@@ -33,6 +34,7 @@ uint8_t blocks[BLOCKS_PER_EXTENT]; // array of disk sectors used
 */ 
 
 typedef uint8_t Extent[32];
+bool freeList[BLOCK_SIZE/EXTENT_SIZE * BLOCKS_PER_EXTENT];
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -56,7 +58,13 @@ void printFreeList();
 
 // internal function, returns -1 for illegal name or name not found
 // otherwise returns extent nunber 0-31
-int findExtentWithName(char *name, uint8_t *block0); 
+int findExtentWithName(char *name, uint8_t *block0);
+
+// populate a firstName and an extName from a fullName
+int splitOutName(char *firstName, char *extName, char *fullName);
+
+// populate a fullName from a firstName and an extName
+int combineName(char *fullName, char *firstName, char *extName);
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
