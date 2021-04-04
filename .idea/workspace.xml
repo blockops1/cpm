@@ -19,6 +19,7 @@
       <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cpmRun" beforeDir="false" afterPath="$PROJECT_DIR$/cpmRun" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cpmfsys.c" beforeDir="false" afterPath="$PROJECT_DIR$/cpmfsys.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cpmfsys.o" beforeDir="false" afterPath="$PROJECT_DIR$/cpmfsys.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fsystest.c" beforeDir="false" afterPath="$PROJECT_DIR$/fsystest.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fsystest.o" beforeDir="false" afterPath="$PROJECT_DIR$/fsystest.o" afterDir="false" />
     </list>
@@ -90,7 +91,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1617503850766</updated>
-      <workItem from="1617503852393" duration="2666000" />
+      <workItem from="1617503852393" duration="3325000" />
     </task>
     <servers />
   </component>

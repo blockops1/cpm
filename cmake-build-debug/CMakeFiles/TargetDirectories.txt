@@ -1,3 +1,0 @@
-/home/rolf/c_coding/cpm/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/rolf/c_coding/cpm/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/rolf/c_coding/cpm/cmake-build-debug/CMakeFiles/cpm.dir
