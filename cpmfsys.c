@@ -1,8 +1,78 @@
 #include "cpmfsys.h"
 
+//function to allocate memory for a DirStructType (see above), and populate it, given a
+//pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
+// which tells which extent from block zero (extent numbers start with 0) to use to make the
+// DirStructType value to return.
+DirStructType *mkDirStruct(int index,uint8_t *e){
+    int line = index * EXTENT_SIZE;
+    DirStructType entry = {0};
+    DirStructType *entry_p = NULL;
+    entry_p = &entry;
+    //go through the block to fill the entry
+    entry.status = e[line];
+    entry.BC = e[line + 13];
+    entry.RC = e[line + 15];
+    for (int i = 0; i < 8; i++) {
+        entry.name[i] = e[line + 1 + i];
+    }
+    for (int i = 0; i < 3; i++) {
+        entry.extension[i] = e[line + 9 + i];
+    }
+    for (int i = 0; i < 32; i++) {
+        entry.blocks[i] = e[line + 16 + i];
+    }
+    return entry_p;
+}
+
+
 // function to write contents of a DirStructType struct back to the specified index of the extent
 // in block of memory (disk block 0) pointed to by e
-void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e);
+void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e) {
+    // check the values before writing to the block
+    // check status between 0 and 15
+    if (d->status < 0 || d->status > 15) return;
+    // check BC
+    if (d->BC < 0 || d->BC > 127) return;
+    // check RC
+    if (d->RC < 0 || d->RC > 7) return;
+    // test name
+    char nameTest[13];
+    for (int i = 0; i < 8; i++) {
+        nameTest[i] = d->name[i];
+    }
+    nameTest[8] = 46;
+    for (int i = 0; i < 3; i++) {
+        nameTest[i + 9] = d->extension[i];
+    }
+    printf("Name: %s", nameTest);
+    if (!checkLegalName(nameTest)) {
+        printf("checkLegalNAme failed");
+        return;
+    }
+    // test valid blocks
+    for (int i = 0; i < 32; i++) {
+        if (d->blocks[i] < 0 || d->blocks[i] > 0xFF) {
+            printf("illegal block number");
+            return;
+        }
+    }
+    // passed all checks, can write to block 0;
+    int line = index * EXTENT_SIZE;
+    e[line] = d->status;
+    e[line + 13] = d->BC;
+    e[line + 15] = d->RC;
+    for (int i = 0; i < 8; i++) {
+        e[line + 1 + i] = d->name[i];
+    }
+    for (int i = 0; i < 3; i++) {
+        e[line + 9 + i] = d->extension[i];
+    }
+    for (int i = 0; i < 32; i++) {
+        e[line + 16 + i] = d->blocks[i];
+    }
+    return;
+}
 
 // populate the FreeList global data structure. freeList[i] == true means
 // that block i of the disk is free. block zero is never free, since it holds
@@ -15,7 +85,7 @@ void makeFreeList() {}
 void printFreeList() {}
 
 // internal function, returns -1 for illegal name or name not found
-// otherwise returns extent nunber 0-31
+// otherwise returns extent number 0-31
 int findExtentWithName(char *name, uint8_t *block0);
 
 // internal function, returns true for legal name (8.3 format), false for illegal
@@ -24,25 +94,25 @@ bool checkLegalName(char *name) {
     bool valid = true;
     //printf("%s\n", name);
     if (name == NULL) return false;
-    if (strlen(name) != 11) return false;
-    if (name[7] != *".") return false;
+    if (strlen(name) != 12) return false;
+    if (name[8] != *".") return false;
     // check first character 0-9, a-z, A-Z
     valid = legalCharacter(name[0]);
     //check other characters 0-9, a-z, A-Z. If a space, rest of name and ext needs to be space
     int counter = 0;
-    while(valid && counter < 6) {
+    while(valid && counter < 7) {
         counter++;
         valid = legalCharacter(name[counter]);
     }
     //printf("line 37 %s\n", valid ? "true" : "false");
-    if (counter < 7 && name[counter] == 32) {
+    if (counter < 8 && name[counter] == 32) {
         valid = true;
         counter++;
     }
     bool spaceOnly = valid;
     //printf("counter: %d\n", counter);
     //printf("line 40 %s\n", valid ? "true" : "false");
-    while(counter < 6) {
+    while(counter < 7) {
         counter++;
         if (name[counter] != 32) spaceOnly = false;
     }
@@ -52,16 +122,16 @@ bool checkLegalName(char *name) {
     counter++;
     //printf("line 48 %s\n", valid ? "true" : "false");
     //printf("counter: %d\n", counter);
-    while(valid && counter < 10) {
+    while(valid && counter < 11) {
         counter++;
         valid = legalCharacter(name[counter]);
     }
     //printf("line 54 %s\n", valid ? "true" : "false");
-    if (counter < 11 && name[counter] == 32) valid = true;
+    if (counter < 12 && name[counter] == 32) valid = true;
     spaceOnly = valid;
-    if (counter == 8 && name[counter] == 32) {
+    if (counter == 9 && name[counter] == 32) {
         spaceOnly = true;
-        while (spaceOnly && counter < 10) {
+        while (spaceOnly && counter < 11) {
             counter++;
             if (name[counter] != 32) spaceOnly = false;
         }
@@ -69,7 +139,7 @@ bool checkLegalName(char *name) {
     }
     //printf("line 60 %s\n", valid ? "true" : "false");
     spaceOnly = valid;
-    while(counter < 10) {
+    while(counter < 11) {
         if (name[counter] != 32) spaceOnly = false;
         counter++;
     }
@@ -135,7 +205,7 @@ int fillExtent(DirStructType *entry_p, uint8_t *block, int extentNum) {
     entry_p->status = block[line];
     entry_p->BC = block[line + 13];
     entry_p->RC = block[line + 15];
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         entry_p->name[i] = block[line + 1 + i];
     }
     for (int i = 0; i < 3; i++) {
@@ -182,9 +252,6 @@ int trimString(char *word) {
     return length;
 }
 
-int lastBlock() {
-    return 0;
-}
 
 // error codes for next five functions (not all errors apply to all 5 functions)
 /* 
