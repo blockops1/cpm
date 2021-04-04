@@ -352,18 +352,19 @@ void cpmDir()
     char trimName[9];
     char trimExt[4];
     int length = 0;
-    DirStructType entry = {0};
+    //DirStructType entry = {0};
     DirStructType *entry_p = NULL;
-    entry_p = &entry;
+    //entry_p = &entry;
     for (line = 0; line < NUM_EXTENTS; line++)
     {
         //printf("line: %d\n", line);
         // this section prints the directory entry
         if (buffer[line * EXTENT_SIZE] != 0xe5)
         {
-            fillExtent(entry_p, buffer_p, line);
-            strcpy(trimName, entry.name);
-            strcpy(trimExt, entry.extension);
+            //fillExtent(entry_p, buffer_p, line);
+            entry_p = mkDirStruct(line, buffer_p);
+            strcpy(trimName, entry_p->name);
+            strcpy(trimExt, entry_p->extension);
             length = trimString(trimName);
             //printf("length: %d", length);
             printf("%.*s.", length, trimName);
@@ -373,11 +374,13 @@ void cpmDir()
             printf("%d\n", fileSize(entry_p));
             memset(trimName, 0, sizeof(trimName));
             memset(trimExt, 0, sizeof(trimExt));
+            free(entry_p);
         }
         //zero out the structure
-        memset(&entry, 0, sizeof(entry));
+        //memset(entry_p, 0, sizeof(*entry_p));
     }
-};
+    return;
+}
 
 // fill an Extent with information from a block from a specific line
 int fillExtent(DirStructType *entry_p, uint8_t *block, int extentNum)
