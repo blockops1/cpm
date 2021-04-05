@@ -1,4 +1,31 @@
 #include "cpmfsys.h"
+#include <ctype.h>
+
+#define NUM_EXTENTS 16
+
+// internal function, returns -1 for illegal name or name not found
+// otherwise returns extent nunber 0-31
+int findExtentWithName(char *name, uint8_t *block0);
+
+// populate a firstName and an extName from a fullName
+int splitOutName(char *firstName, char *extName, char *fullName);
+
+// populate a fullName from a firstName and an extName
+int combineName(char *fullName, char *firstName, char *extName);
+
+// checks for legal characters of 0-9, A-Z, a-z
+bool legalCharacter(char);
+
+// calculate and return filesize from the directory entry
+int fileSize(DirStructType *);
+
+int trimString(char *);
+
+//normalize any legal input name to 8.3 by padding with spaces
+int normalizeName(char *inputName, char *outputName);
+
+//bool freeList[BLOCK_SIZE/EXTENT_SIZE * BLOCKS_PER_EXTENT];
+bool freeList[255];
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -58,7 +85,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
     {
         nameTest[i + 9] = d->extension[i];
     }
-    printf("Name: %s\n", nameTest);
+    //printf("Name: %s\n", nameTest);
     if (!checkLegalName(nameTest))
     {
         printf("checkLegalNAme failed\n");
@@ -104,9 +131,9 @@ void makeFreeList()
     buffer_p = (uint8_t *)&buffer;
     blockRead(buffer_p, 0);
 
-    DirStructType entry = {0};
+    //DirStructType entry = {0};
     DirStructType *entry_p = NULL;
-    entry_p = &entry;
+    //entry_p = &entry;
     // first mark all blocks true
     for (int i = 0; i < BLOCK_SIZE; i++)
     {
@@ -117,7 +144,8 @@ void makeFreeList()
     for (int i = 0; i < NUM_EXTENTS; i++)
     {
         //printf("entry %d\n", i);
-        fillExtent(entry_p, buffer_p, i);
+        entry_p = mkDirStruct(i, buffer_p);
+        //fillExtent(entry_p, buffer_p, i);
         //line_p = mkDirStruct(i, buffer_p);
         //printf("entry %d\n", i);
         if (entry_p->status >= 0 && entry_p->status <= 15)
@@ -130,6 +158,7 @@ void makeFreeList()
             }
         }
         //printf("\n");
+        free(entry_p);
     }
     return;
 }
@@ -164,15 +193,20 @@ void printFreeList()
 // otherwise returns extent number 0-31
 int findExtentWithName(char *name, uint8_t *block0)
 {
+    //printf("findExtentWithName start\n");
     if (!checkLegalName(name))
+    {
+        printf("find: not a legal name\n");
         return -1;
-    char firstName[9] = "testname";
-    char extName[4] = "ext";
+    }
+    char firstName[9] = "testfile";
+    char extName[4] = "txt";
     //DirStructType entry = {0};
     DirStructType *entry_p = NULL;
     //entry_p = &entry;
     // split out the provided name into first 8 and 3 ext
-    if (splitOutName(firstName, extName, name) != 0) {
+    if (splitOutName(firstName, extName, name) != 0)
+    {
         printf("problem splitting name\n");
         return -1;
     }
@@ -182,7 +216,7 @@ int findExtentWithName(char *name, uint8_t *block0)
     {
         //printf("before fill line: %d firstname: %s ext: %s\n", line, firstName, extName);
         entry_p = mkDirStruct(line, block0);
-        //fillExtent(entry_p, block0, line); 
+        //fillExtent(entry_p, block0, line);
         //printf("after fill line: %d firstname: %s ext: %s\n", line, firstName, extName);
         //printf("after fill line2: %d firstname: %s ext: %s\n", line, entry_p->name, entry_p->extension);
         if (strcmp(firstName, entry_p->name) == 0 && strcmp(entry_p->extension, extName) == 0)
@@ -190,7 +224,9 @@ int findExtentWithName(char *name, uint8_t *block0)
             //printf("found a match! line: %d firstname: %s ext: %s\n", line, firstName, extName);
             free(entry_p);
             return line;
-        } else {
+        }
+        else
+        {
             free(entry_p);
         }
     }
@@ -201,15 +237,17 @@ int findExtentWithName(char *name, uint8_t *block0)
 int splitOutName(char *firstName, char *extName, char *fullName)
 {
     // split out the provided name into first 8 and 3 ext
-    //printf("fullname %s\n", fullName);
-    //printf("lenght firstname: %lu\n", strlen(firstName));
-    //printf("lenght ext name: %lu\n", strlen(extName));
-    if (strlen(firstName) != 8 || strlen(extName) != 3) {
+    //printf("split fullname %s\n", fullName);
+    //printf("split lenght firstname: %lu\n", strlen(firstName));
+    //printf("split lenght ext name: %lu\n", strlen(extName));
+    if (strlen(firstName) != 8 || strlen(extName) != 3)
+    {
         printf("stringlength problem\n");
         return -1;
     }
-    if (!checkLegalName(fullName)) {
-        printf("illegal name\n");
+    if (!checkLegalName(fullName))
+    {
+        printf("split: illegal name\n");
         return -1;
     }
     for (int i = 0; i < 8; i++)
@@ -382,29 +420,6 @@ void cpmDir()
     return;
 }
 
-// fill an Extent with information from a block from a specific line
-int fillExtent(DirStructType *entry_p, uint8_t *block, int extentNum)
-{
-    int line = extentNum * EXTENT_SIZE;
-    //go through the block to fill the entry
-    entry_p->status = block[line];
-    entry_p->BC = block[line + 13];
-    entry_p->RC = block[line + 15];
-    for (int i = 0; i < 8; i++)
-    {
-        entry_p->name[i] = block[line + 1 + i];
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        entry_p->extension[i] = block[line + 9 + i];
-    }
-    for (int i = 0; i < 32; i++)
-    {
-        entry_p->blocks[i] = block[line + 16 + i];
-    }
-    return 0;
-}
-
 // calculate and return the filesize of a directory entry
 int fileSize(DirStructType *entry)
 {
@@ -459,35 +474,85 @@ int trimString(char *word)
 // modify the extent for file named oldName with newName, and write to the disk
 int cpmRename(char *oldName, char *newName)
 {
-    printf("oldname: %s newname: %s\n", oldName, newName);
+    //printf("oldname: %s newname: %s\n", oldName, newName);
     int line = -1;
     uint8_t buffer[BLOCK_SIZE] = {0};
     uint8_t *buffer_p = NULL;
     buffer_p = (uint8_t *)&buffer;
     blockRead(buffer_p, 0);
-    if (!checkLegalName(newName))
+    //printf("looking for newName %s\n", newName);
+    //need to normalize newName to 8.3 format from whatever is typed
+    char oldName2[13] = "";
+    char newName2[13] = "";
+    normalizeName(oldName, oldName2);
+    normalizeName(newName, newName2);
+    if (!checkLegalName(newName2))
     {
-        printf("illegal new name\n");
+        printf("cpm - illegal new name\n");
         return -2;
     }
-    line = findExtentWithName(newName, buffer_p);
+    line = findExtentWithName(newName2, buffer_p);
     if (line != -1)
     {
         printf("new name already in directory\n");
         return -3;
     }
-    line = findExtentWithName(oldName, buffer_p);
+    //printf("looking for oldName %s\n", oldName2);
+    line = findExtentWithName(oldName2, buffer_p);
     if (line == -1)
     {
-        printf("old name notfound\n");
+        printf("old name not found\n");
         return -2;
     }
     DirStructType *extent = mkDirStruct(line, buffer_p);
     //char fullName[13];
-    splitOutName(extent->name, extent->extension, newName);
+    splitOutName(extent->name, extent->extension, newName2);
     writeDirStruct(extent, line, buffer_p);
     free(extent);
     return blockWrite(buffer_p, 0);
+}
+
+//normalize any legal input name to 8.3 by padding with spaces outputname must be char[13]
+int normalizeName(char *inputName, char *outputName)
+{
+    size_t outputName_size = sizeof(outputName)/sizeof(outputName[0]);
+    //size_t outputName_size = sizeof(outputName);
+    //printf("output name array size: %lu\n", outputName_size);
+    if (outputName_size < 8)
+    {
+        printf("outputName too small\n");
+        return -1;
+    }
+    int inCounter = 0;
+    int outCounter = 0;
+    while (inputName[inCounter] != 46 && inputName[inCounter] != 0 && inCounter < 8)
+    {
+        outputName[outCounter] = inputName[inCounter];
+        inCounter++;
+        outCounter++;
+    }
+    while (outCounter < 8)
+    {
+        outputName[outCounter] = 32;
+        outCounter++;
+    }
+    outputName[8] = 46;
+    outCounter++;
+    inCounter++;
+    while (inputName[inCounter] != 46 && inputName[inCounter] != 0 && inCounter < 12)
+    {
+        outputName[outCounter] = inputName[inCounter];
+        inCounter++;
+        outCounter++;
+    }
+    while (outCounter < 12)
+    {
+        outputName[outCounter] = 32;
+        outCounter++;
+    }
+    //printf("inputName %s\n", inputName);
+    //printf("OutputName %s\n", outputName);
+    return 0;
 }
 
 // delete the file named name, and free its disk blocks in the free list

@@ -3,6 +3,7 @@
 #include "cpmfsys.h"
 #include "diskSimulator.h"
 
+
 // for debugging, prints a region of memory starting at buffer with
 void printBuffer(uint8_t buffer[], int size)
 {
@@ -51,7 +52,9 @@ int main(int argc, char *argv[])
   strcpy(testname, "testdds1.  b");
   printf("%s: ", testname);
   printf("%s\n", checkLegalName(testname) ? "true" : "false");
-
+strcpy(testname, "testdd  .   ");
+printf("%s: ", testname);
+printf("%s\n", checkLegalName(testname) ? "true" : "false");
   DirStructType entry = {0};
   DirStructType *entry_p = NULL;
   entry_p = &entry;
@@ -77,6 +80,12 @@ int main(int argc, char *argv[])
   printBuffer(buffer1, 128);
   printBuffer(buffer2, 128);
   cpmRename("mytestf1.txt", "mytestf2.new");
+  cpmDir();
+  cpmRename("shortf.ps", "mygotoad.txt");
+  cpmDir();
+  cpmRename("mygotoad.txt", "mygo.txt");
+  cpmDir();
+  cpmRename("mytestf2.new", "gob");
   cpmDir();
   //makeFreeList();
   //printFreeList();
