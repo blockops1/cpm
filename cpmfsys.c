@@ -287,27 +287,31 @@ int combineName(char *fullName, char *firstName, char *extName)
 
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
+// make sure name is normalized first. If not, use normalizeName()
 bool checkLegalName(char *name)
 {
     bool valid = true;
     //printf("%s\n", name);
     if (name == NULL)
         return false;
-    if (strlen(name) != 12)
-        return false;
-    if (name[8] != *".")
-        return false;
+    // normalize the input
+    char name2[13] = "";
+    normalizeName(name, name2);
+    //if (strlen(name) != 12)
+    //    return false;
+    //if (name[8] != *".")
+    //    return false;
     // check first character 0-9, a-z, A-Z
-    valid = legalCharacter(name[0]);
+    valid = legalCharacter(name2[0]);
     //check other characters 0-9, a-z, A-Z. If a space, rest of name and ext needs to be space
     int counter = 0;
     while (valid && counter < 7)
     {
         counter++;
-        valid = legalCharacter(name[counter]);
+        valid = legalCharacter(name2[counter]);
     }
     //printf("line 37 %s\n", valid ? "true" : "false");
-    if (counter < 8 && name[counter] == 32)
+    if (counter < 8 && name2[counter] == 32)
     {
         valid = true;
         counter++;
@@ -318,7 +322,7 @@ bool checkLegalName(char *name)
     while (counter < 7)
     {
         counter++;
-        if (name[counter] != 32)
+        if (name2[counter] != 32)
             spaceOnly = false;
     }
     valid = spaceOnly;
@@ -330,19 +334,19 @@ bool checkLegalName(char *name)
     while (valid && counter < 11)
     {
         counter++;
-        valid = legalCharacter(name[counter]);
+        valid = legalCharacter(name2[counter]);
     }
     //printf("line 54 %s\n", valid ? "true" : "false");
-    if (counter < 12 && name[counter] == 32)
+    if (counter < 12 && name2[counter] == 32)
         valid = true;
     spaceOnly = valid;
-    if (counter == 9 && name[counter] == 32)
+    if (counter == 9 && name2[counter] == 32)
     {
         spaceOnly = true;
         while (spaceOnly && counter < 11)
         {
             counter++;
-            if (name[counter] != 32)
+            if (name2[counter] != 32)
                 spaceOnly = false;
         }
         valid = spaceOnly;
@@ -351,7 +355,7 @@ bool checkLegalName(char *name)
     spaceOnly = valid;
     while (counter < 11)
     {
-        if (name[counter] != 32)
+        if (name2[counter] != 32)
             spaceOnly = false;
         counter++;
     }
@@ -512,7 +516,7 @@ int cpmRename(char *oldName, char *newName)
     return blockWrite(buffer_p, 0);
 }
 
-//normalize any legal input name to 8.3 by padding with spaces outputname must be char[13]
+//normalize any legal input name to 8.3 by padding with spaces. outputname must be char[13]
 int normalizeName(char *inputName, char *outputName)
 {
     size_t outputName_size = sizeof(outputName)/sizeof(outputName[0]);
