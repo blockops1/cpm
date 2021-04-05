@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
   //int i;
   readImage("image1.img");
   //makeFreeList();
+  printFreeList();
   cpmDir();
   char testname[13] = "testfil1.std";
   printf("%s: ", testname);

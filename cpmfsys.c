@@ -25,7 +25,8 @@ int trimString(char *);
 int normalizeName(char *inputName, char *outputName);
 
 //bool freeList[BLOCK_SIZE/EXTENT_SIZE * BLOCKS_PER_EXTENT];
-bool freeList[255];
+
+bool freeList[NUM_BLOCKS];
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -52,7 +53,7 @@ DirStructType *mkDirStruct(int index, uint8_t *e)
     {
         entry_p->extension[i] = e[line + 9 + i];
     }
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < BLOCKS_PER_EXTENT; i++)
     {
         entry_p->blocks[i] = e[line + 16 + i];
     }
@@ -135,7 +136,7 @@ void makeFreeList()
     DirStructType *entry_p = NULL;
     //entry_p = &entry;
     // first mark all blocks true
-    for (int i = 0; i < BLOCK_SIZE; i++)
+    for (int i = 0; i < NUM_BLOCKS; i++)
     {
         freeList[i] = true;
     }
@@ -153,8 +154,9 @@ void makeFreeList()
             for (int j = 0; j < BLOCKS_PER_EXTENT; j++)
             {
                 //printf("%x ", i * NUM_EXTENTS + j);
-                if (entry_p->blocks[j] != 0x00)
+                if (entry_p->blocks[j] != 0x00) {
                     freeList[i * NUM_EXTENTS + j] = false;
+                }
             }
         }
         //printf("\n");
@@ -168,7 +170,9 @@ void makeFreeList()
 // block with a *, a free block with a .
 void printFreeList()
 {
+    //printf("call makefreelist\n");
     makeFreeList();
+    //printf("completed makefreelist\n");
     printf("FREE BLOCK LIST: (* means in-use)\n ");
     for (int i = 0; i < NUM_EXTENTS; i++)
     {
@@ -492,20 +496,20 @@ int cpmRename(char *oldName, char *newName)
     normalizeName(newName, newName2);
     if (!checkLegalName(newName2))
     {
-        printf("cpm - illegal new name\n");
+        //printf("cpm - illegal new name\n");
         return -2;
     }
     line = findExtentWithName(newName2, buffer_p);
     if (line != -1)
     {
-        printf("new name already in directory\n");
+        //printf("new name already in directory\n");
         return -3;
     }
     //printf("looking for oldName %s\n", oldName2);
     line = findExtentWithName(oldName2, buffer_p);
     if (line == -1)
     {
-        printf("old name not found\n");
+        //printf("old name not found\n");
         return -2;
     }
     DirStructType *extent = mkDirStruct(line, buffer_p);
@@ -524,7 +528,7 @@ int normalizeName(char *inputName, char *outputName)
     //printf("output name array size: %lu\n", outputName_size);
     if (outputName_size < 8)
     {
-        printf("outputName too small\n");
+        //printf("outputName too small\n");
         return -1;
     }
     int inCounter = 0;
@@ -562,6 +566,37 @@ int normalizeName(char *inputName, char *outputName)
 // delete the file named name, and free its disk blocks in the free list
 int cpmDelete(char *name)
 {
+    // check input name
+    //need to normalize newName to 8.3 format from whatever is typed
+    char name2[13] = "";
+    normalizeName(name, name2);
+    if (!checkLegalName(name2))
+    {
+        //printf("cpm - illegal filename\n");
+        return -2;
+    }
+    //printf("cpmdelete name2: %s\n", name2);
+    // get block 0
+    int line = -1;
+    uint8_t buffer[BLOCK_SIZE] = {0};
+    uint8_t *buffer_p = NULL;
+    buffer_p = (uint8_t *)&buffer;
+    blockRead(buffer_p, 0);
+    // find the line
+    line = findExtentWithName(name2, buffer_p);
+    //printf("cpmdelete found name: %s at line %d\n", name2, line);
+    if (line == -1)
+    {
+        //printf("name not in directory\n");
+        return -1;
+    }
+    //write directly to the fricking block
+    buffer_p[line * EXTENT_SIZE] = 0xe5;
+    for (int i = 1; i < EXTENT_SIZE; i++) {
+        buffer_p[line * EXTENT_SIZE + i] = 0x00;
+    }
+    // write to block 0
+    blockWrite(buffer_p, 0);
     return 0;
 }
 

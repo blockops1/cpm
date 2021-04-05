@@ -30,6 +30,7 @@ int main(int argc, char * argv[]) {
   cpmDelete("shortf.ps");
   cpmDir();
   cpmRename("mytestf1.txt","mytest2.tx");
+  //cpmDir();
   fprintf(stdout,"cpmRename return code = %d,\n",cpmRename("mytestf","mytestv2.x")); 
   cpmDir(); 
   printFreeList(); 
