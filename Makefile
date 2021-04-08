@@ -1,16 +1,16 @@
-cpmRun: diskSimulator.o  cpmfsys.o fsysdriver.o 
-	gcc -o cpmRun diskSimulator.o cpmfsys.o fsysdriver.o 
+cpmRun: diskSimulator.o  cpmfsys.o fsystest.o
+	gcc -g -Wall -Werror -o cpmRun diskSimulator.o cpmfsys.o fsystest.o 
 
 diskSimulator.o: diskSimulator.c diskSimulator.h
-	gcc -c diskSimulator.c
+	gcc -g -Wall -Werror -c diskSimulator.c
 
 cpmfsys.o: cpmfsys.h cpmfsys.c 
-	gcc -c cpmfsys.c  
+	gcc -g -Wall -Werror -c cpmfsys.c  
 
-fsysdriver.o: fsysdriver.c
-	gcc -c fsysdriver.c 
+fsystest.o: fsystest.c
+	gcc -g -Wall -Werror -c fsystest.c
 
-all: 
+all:
 	cpmRun
 
 clean: 

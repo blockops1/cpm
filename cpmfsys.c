@@ -24,11 +24,9 @@ int trimString(char *);
 //normalize any legal input name to 8.3 by padding with spaces
 int normalizeName(char *inputName, char *outputName);
 
-void printBuffer2(uint8_t buffer[],int size);
+void printBuffer2(uint8_t buffer[], int size);
 
 bool freeList[NUM_BLOCKS];
-
-
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -157,7 +155,8 @@ void makeFreeList()
             for (int j = 0; j < BLOCKS_PER_EXTENT; j++)
             {
                 //printf("%x ", i * NUM_EXTENTS + j);
-                if (entry_p->blocks[j] != 0x00) {
+                if (entry_p->blocks[j] != 0x00)
+                {
                     freeList[i * NUM_EXTENTS + j] = false;
                 }
             }
@@ -296,8 +295,9 @@ int combineName(char *fullName, char *firstName, char *extName)
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
 // make sure name is normalized first. If not, use normalizeName()
-bool checkLegalName(char *name){
-    if (name == NULL) 
+bool checkLegalName(char *name)
+{
+    if (name == NULL)
         return false;
     char name2[13] = "";
     //change the input to a normalized 8.3
@@ -305,31 +305,37 @@ bool checkLegalName(char *name){
     normalizeName(name, name2);
     //printf("check - name2: %s\n", name2);
     // we now have a single string with the 8.3 in correct place
-    if (!legalCharacter(name2[0])) return false;
+    if (!legalCharacter(name2[0]))
+        return false;
     bool firstSpace = false;
     int i = 1;
     //check first 8 valid
-    while (i < 8) {
+    while (i < 8)
+    {
         //printf("check - name2 %s first 8 character is %c: %d\n", name2, name2[i], i);
-        if (!((legalCharacter(name2[i])) || name2[i] == 32)) return false;
-        if (firstSpace && name2[i] != 32) return false;
-        if (name2[i] == 32) firstSpace = true;
+        if (!((legalCharacter(name2[i])) || name2[i] == 32))
+            return false;
+        if (firstSpace && name2[i] != 32)
+            return false;
+        if (name2[i] == 32)
+            firstSpace = true;
         i++;
     }
     //now check the 3 at the end. all spaces is permitted
     firstSpace = false;
     i = 9;
-    while (i < 12) {
-        if (!((legalCharacter(name2[i])) || name2[i] == 32)) return false;
-        if (firstSpace && name2[i] != 32) return false;
-        if (name2[i] == 32) firstSpace = true;
+    while (i < 12)
+    {
+        if (!((legalCharacter(name2[i])) || name2[i] == 32))
+            return false;
+        if (firstSpace && name2[i] != 32)
+            return false;
+        if (name2[i] == 32)
+            firstSpace = true;
         i++;
     }
     return true;
 }
-
-
-
 
 // checks if a character is of the legal value 0-9, a-z, A-Z
 bool legalCharacter(char letter)
@@ -491,7 +497,7 @@ int cpmRename(char *oldName, char *newName)
 //normalize any legal input name to 8.3 by padding with spaces. outputname must be char[13]
 int normalizeName(char *inputName, char *outputName)
 {
-    size_t outputName_size = sizeof(outputName)/sizeof(outputName[0]);
+    size_t outputName_size = sizeof(outputName) / sizeof(outputName[0]);
     //size_t outputName_size = sizeof(outputName);
     //printf("output name array size: %lu\n", outputName_size);
     if (outputName_size < 8)
@@ -504,7 +510,7 @@ int normalizeName(char *inputName, char *outputName)
     while (inputName[inCounter] != 46 && inputName[inCounter] != 0 && inCounter < 8)
     {
         outputName[outCounter] = inputName[inCounter];
-    //    if (inputName[inCounter] == 46) foundDot = true;
+        //    if (inputName[inCounter] == 46) foundDot = true;
         inCounter++;
         outCounter++;
     }
@@ -515,8 +521,10 @@ int normalizeName(char *inputName, char *outputName)
     }
     outputName[8] = 46;
     // if we have hit an end of string, fill rest of outputNane with spaces
-    if (inputName[inCounter] == 0) {
-        for (int i = 9; i < 12; i++) {
+    if (inputName[inCounter] == 0)
+    {
+        for (int i = 9; i < 12; i++)
+        {
             outputName[i] = 32;
         }
         return 0;
@@ -568,7 +576,8 @@ int cpmDelete(char *name)
     }
     //write directly to the fricking block
     buffer_p[line * EXTENT_SIZE] = 0xe5;
-    for (int i = 1; i < EXTENT_SIZE; i++) {
+    for (int i = 1; i < EXTENT_SIZE; i++)
+    {
         buffer_p[line * EXTENT_SIZE + i] = 0x00;
     }
     // write to block 0
@@ -576,15 +585,122 @@ int cpmDelete(char *name)
     return 0;
 }
 
+// for debugging, prints a region of memory starting at buffer with
+void printBuffer2(uint8_t buffer[], int size)
+{
+    int i;
+    fprintf(stdout, "\nBUFFER PRINT:\n");
+    for (i = 0; i < size; i++)
+    {
+        if (i % 16 == 0)
+        {
+            fprintf(stdout, "%4x: ", i);
+        }
+        fprintf(stdout, "%2x ", buffer[i]);
+        if (i % 16 == 15)
+        {
+            fprintf(stdout, "\n");
+        }
+    }
+    fprintf(stdout, "\n");
+}
+
 // following functions need not be implemented for Lab 2
 
 int cpmCopy(char *oldName, char *newName)
 {
+    // read oldName, count number of blocks used
+    if (oldName == NULL || !checkLegalName(oldName))
+        return -2;
+    if (newName == NULL || !checkLegalName(newName))
+        return -2;
+    // get block 0
+    int oldLine = -1;
+    int newLine = -1;
+    uint8_t buffer[BLOCK_SIZE] = {0};
+    uint8_t *buffer_p = NULL;
+    buffer_p = (uint8_t *)&buffer;
+    blockRead(buffer_p, 0);
+    // check if newname already in use, if not, find an unused line
+    newLine = findExtentWithName(newName, buffer_p);
+    if (newLine != -1)
+        return -3;
+    bool openLine = false;
+    while (newLine < 16 && !openLine) {
+        newLine++;
+        if (buffer[newLine * EXTENT_SIZE] == 0x58) openLine = true;
+    }
+    if (!openLine) return -4;
+    // find the oldname line
+    oldLine = findExtentWithName(oldName, buffer_p);
+    if (oldLine == -1)
+        return -1;
+    // create an extent from the oldLine number
+    DirStructType *oldEntry_p = mkDirStruct(oldLine, buffer_p);
+    // count the number of blocks
+    int blockNumber = 0;
+    int blockCount = 0;
+    while (blockNumber < 16)
+    {
+        if (oldEntry_p->blocks[blockNumber] != 0)
+        {
+            blockCount++;
+        }
+        blockNumber++;
+    }
+    // check freeblock list for how many blocks free
+    makeFreeList();
+    int freeBlockCount = 0;
+    for (int i = 0; i < NUM_BLOCKS; i++)
+    {
+        if (freeList[i])
+            freeBlockCount++;
+    }
+    if (freeBlockCount < blockCount)
+        return -4;
+    // create an extent for newName using available blocks
+    DirStructType *newEntry_p = (DirStructType *)malloc(sizeof(DirStructType));
+    splitOutName(newEntry_p->name, newEntry_p->extension, newName);
+    // copy all info from old to new except blocks
+    newEntry_p->status = oldEntry_p->status;
+    newEntry_p->XL = oldEntry_p->XL;
+    newEntry_p->BC = oldEntry_p->BC;
+    newEntry_p->XH = oldEntry_p->XH;
+    newEntry_p->RC = oldEntry_p->RC;
+    // create a new blocklist in the new extent
+    int freeBlock = 0;
+    int newBlock = 0;
+    while (freeBlock < NUM_BLOCKS && newBlock < blockCount)
+    {
+        if (freeList[freeBlock])
+        {
+            newEntry_p->blocks[newBlock] = freeBlock;
+        }
+        freeBlock++;
+        newBlock++;
+    }
+    // copy block data from old to new
+    uint8_t *dataBuffer_p = (u_int8_t *)(malloc(BLOCK_SIZE * sizeof(u_int8_t))); 
+    while (blockNumber < 16) {
+        if (oldEntry_p->blocks[blockNumber] != 0x00)
+        {
+            blockRead(dataBuffer_p, oldEntry_p->blocks[blockNumber]);
+            blockWrite(dataBuffer_p, newEntry_p->blocks[blockNumber]);
+        }
+        blockNumber++;
+    }
+    // write new extent to newLine
+    writeDirStruct(newEntry_p, newLine, buffer_p);
+    blockWrite(buffer_p,0);
+    // find
     return 0;
 }
 
 int cpmOpen(char *fileName, char mode)
 {
+    // load the extent and block list
+    // have a pointer, return pointer number?
+    // pointer needs to be a global variable
     return 0;
 }
 
@@ -605,19 +721,3 @@ int cpmWrite(int pointer, uint8_t *buffer, int size)
 {
     return 0;
 }
-
-// for debugging, prints a region of memory starting at buffer with 
-void printBuffer2(uint8_t buffer[],int size) { 
-  int i;
-  fprintf(stdout,"\nBUFFER PRINT:\n"); 
-  for (i = 0; i < size; i++) { 
-    if (i % 16 == 0) { 
-      fprintf(stdout,"%4x: ",i); 
-    }
-    fprintf(stdout, "%2x ",buffer[i]);
-    if (i % 16 == 15) { 
-      fprintf(stdout,"\n"); 
-    }
-  }
-  fprintf(stdout,"\n"); 
-} 
