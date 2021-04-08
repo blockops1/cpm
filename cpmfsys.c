@@ -24,9 +24,11 @@ int trimString(char *);
 //normalize any legal input name to 8.3 by padding with spaces
 int normalizeName(char *inputName, char *outputName);
 
-//bool freeList[BLOCK_SIZE/EXTENT_SIZE * BLOCKS_PER_EXTENT];
+void printBuffer2(uint8_t buffer[],int size);
 
 bool freeList[NUM_BLOCKS];
+
+
 
 //function to allocate memory for a DirStructType (see above), and populate it, given a
 //pointer to a buffer of memory holding the contents of disk block 0 (e), and an integer index
@@ -77,6 +79,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
         return;
     // test name
     char nameTest[13];
+    //combineName(nameTest, d->name, d->extension);
     for (int i = 0; i < 8; i++)
     {
         nameTest[i] = d->name[i];
@@ -86,7 +89,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
     {
         nameTest[i + 9] = d->extension[i];
     }
-    //printf("Name: %s\n", nameTest);
+    //printf("NameTest: %s\n", nameTest);
     if (!checkLegalName(nameTest))
     {
         printf("checkLegalNAme failed\n");
@@ -114,7 +117,7 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
     {
         e[line + 9 + i] = d->extension[i];
     }
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < 16; i++)
     {
         e[line + 16 + i] = d->blocks[i];
     }
@@ -198,6 +201,7 @@ void printFreeList()
 int findExtentWithName(char *name, uint8_t *block0)
 {
     //printf("findExtentWithName start\n");
+    //printf("find - name to check: %s\n", name);
     if (!checkLegalName(name))
     {
         printf("find: not a legal name\n");
@@ -292,80 +296,40 @@ int combineName(char *fullName, char *firstName, char *extName)
 // internal function, returns true for legal name (8.3 format), false for illegal
 // (name or extension too long, name blank, or  illegal characters in name or extension)
 // make sure name is normalized first. If not, use normalizeName()
-bool checkLegalName(char *name)
-{
-    bool valid = true;
-    //printf("%s\n", name);
-    if (name == NULL)
+bool checkLegalName(char *name){
+    if (name == NULL) 
         return false;
-    // normalize the input
     char name2[13] = "";
+    //change the input to a normalized 8.3
+    //printf("check - name: %s\n", name);
     normalizeName(name, name2);
-    //if (strlen(name) != 12)
-    //    return false;
-    //if (name[8] != *".")
-    //    return false;
-    // check first character 0-9, a-z, A-Z
-    valid = legalCharacter(name2[0]);
-    //check other characters 0-9, a-z, A-Z. If a space, rest of name and ext needs to be space
-    int counter = 0;
-    while (valid && counter < 7)
-    {
-        counter++;
-        valid = legalCharacter(name2[counter]);
+    //printf("check - name2: %s\n", name2);
+    // we now have a single string with the 8.3 in correct place
+    if (!legalCharacter(name2[0])) return false;
+    bool firstSpace = false;
+    int i = 1;
+    //check first 8 valid
+    while (i < 8) {
+        //printf("check - name2 %s first 8 character is %c: %d\n", name2, name2[i], i);
+        if (!((legalCharacter(name2[i])) || name2[i] == 32)) return false;
+        if (firstSpace && name2[i] != 32) return false;
+        if (name2[i] == 32) firstSpace = true;
+        i++;
     }
-    //printf("line 37 %s\n", valid ? "true" : "false");
-    if (counter < 8 && name2[counter] == 32)
-    {
-        valid = true;
-        counter++;
+    //now check the 3 at the end. all spaces is permitted
+    firstSpace = false;
+    i = 9;
+    while (i < 12) {
+        if (!((legalCharacter(name2[i])) || name2[i] == 32)) return false;
+        if (firstSpace && name2[i] != 32) return false;
+        if (name2[i] == 32) firstSpace = true;
+        i++;
     }
-    bool spaceOnly = valid;
-    //printf("counter: %d\n", counter);
-    //printf("line 40 %s\n", valid ? "true" : "false");
-    while (counter < 7)
-    {
-        counter++;
-        if (name2[counter] != 32)
-            spaceOnly = false;
-    }
-    valid = spaceOnly;
-    //printf("counter: %d\n", counter);
-    // counter must be 7 by here, now we check the extension
-    counter++;
-    //printf("line 48 %s\n", valid ? "true" : "false");
-    //printf("counter: %d\n", counter);
-    while (valid && counter < 11)
-    {
-        counter++;
-        valid = legalCharacter(name2[counter]);
-    }
-    //printf("line 54 %s\n", valid ? "true" : "false");
-    if (counter < 12 && name2[counter] == 32)
-        valid = true;
-    spaceOnly = valid;
-    if (counter == 9 && name2[counter] == 32)
-    {
-        spaceOnly = true;
-        while (spaceOnly && counter < 11)
-        {
-            counter++;
-            if (name2[counter] != 32)
-                spaceOnly = false;
-        }
-        valid = spaceOnly;
-    }
-    //printf("line 60 %s\n", valid ? "true" : "false");
-    spaceOnly = valid;
-    while (counter < 11)
-    {
-        if (name2[counter] != 32)
-            spaceOnly = false;
-        counter++;
-    }
-    valid = spaceOnly;
-    return valid;
+    return true;
 }
+
+
+
 
 // checks if a character is of the legal value 0-9, a-z, A-Z
 bool legalCharacter(char letter)
@@ -494,28 +458,32 @@ int cpmRename(char *oldName, char *newName)
     char newName2[13] = "";
     normalizeName(oldName, oldName2);
     normalizeName(newName, newName2);
+    //printf("looking for newName %s\n", newName2);
     if (!checkLegalName(newName2))
     {
-        //printf("cpm - illegal new name\n");
+        printf("cpm - illegal new name\n");
         return -2;
     }
     line = findExtentWithName(newName2, buffer_p);
     if (line != -1)
     {
-        //printf("new name already in directory\n");
+        printf("new name already in directory\n");
         return -3;
     }
     //printf("looking for oldName %s\n", oldName2);
     line = findExtentWithName(oldName2, buffer_p);
     if (line == -1)
     {
-        //printf("old name not found\n");
+        printf("old name not found\n");
         return -2;
     }
     DirStructType *extent = mkDirStruct(line, buffer_p);
     //char fullName[13];
     splitOutName(extent->name, extent->extension, newName2);
+    //printf("newname2: %s\n", newName2);
+    //printBuffer2(buffer_p, 128);
     writeDirStruct(extent, line, buffer_p);
+    //printBuffer2(buffer_p, 128);
     free(extent);
     return blockWrite(buffer_p, 0);
 }
@@ -536,6 +504,7 @@ int normalizeName(char *inputName, char *outputName)
     while (inputName[inCounter] != 46 && inputName[inCounter] != 0 && inCounter < 8)
     {
         outputName[outCounter] = inputName[inCounter];
+    //    if (inputName[inCounter] == 46) foundDot = true;
         inCounter++;
         outCounter++;
     }
@@ -545,9 +514,16 @@ int normalizeName(char *inputName, char *outputName)
         outCounter++;
     }
     outputName[8] = 46;
+    // if we have hit an end of string, fill rest of outputNane with spaces
+    if (inputName[inCounter] == 0) {
+        for (int i = 9; i < 12; i++) {
+            outputName[i] = 32;
+        }
+        return 0;
+    }
     outCounter++;
     inCounter++;
-    while (inputName[inCounter] != 46 && inputName[inCounter] != 0 && inCounter < 12)
+    while (inputName[inCounter] != 32 && inputName[inCounter] != 0 && inCounter < 12)
     {
         outputName[outCounter] = inputName[inCounter];
         inCounter++;
@@ -629,3 +605,19 @@ int cpmWrite(int pointer, uint8_t *buffer, int size)
 {
     return 0;
 }
+
+// for debugging, prints a region of memory starting at buffer with 
+void printBuffer2(uint8_t buffer[],int size) { 
+  int i;
+  fprintf(stdout,"\nBUFFER PRINT:\n"); 
+  for (i = 0; i < size; i++) { 
+    if (i % 16 == 0) { 
+      fprintf(stdout,"%4x: ",i); 
+    }
+    fprintf(stdout, "%2x ",buffer[i]);
+    if (i % 16 == 15) { 
+      fprintf(stdout,"\n"); 
+    }
+  }
+  fprintf(stdout,"\n"); 
+} 

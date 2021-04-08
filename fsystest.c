@@ -56,6 +56,9 @@ int main(int argc, char *argv[])
 strcpy(testname, "testdd  .   ");
 printf("%s: ", testname);
 printf("%s\n", checkLegalName(testname) ? "true" : "false");
+strcpy(testname, "gob");
+printf("%s: ", testname);
+printf("%s\n", checkLegalName(testname) ? "true" : "false");
   DirStructType entry = {0};
   DirStructType *entry_p = NULL;
   entry_p = &entry;
