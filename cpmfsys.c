@@ -105,7 +105,9 @@ void writeDirStruct(DirStructType *d, uint8_t index, uint8_t *e)
     // passed all checks, can write to block 0;
     int line = index * EXTENT_SIZE;
     e[line] = d->status;
+    e[line + 12] = d->XL;
     e[line + 13] = d->BC;
+    e[line + 14] = d->XH;
     e[line + 15] = d->RC;
     for (int i = 0; i < 8; i++)
     {
@@ -247,15 +249,6 @@ int findExtentWithName(char *name, uint8_t *block0)
 // populate a firstName and an extName from a fullName
 int splitOutName(char *firstName, char *extName, char *fullName)
 {
-    // split out the provided name into first 8 and 3 ext
-    //printf("split fullname %s\n", fullName);
-    //printf("split lenght firstname: %lu\n", strlen(firstName));
-    //printf("split lenght ext name: %lu\n", strlen(extName));
-    if (strlen(firstName) != 8 || strlen(extName) != 3)
-    {
-        printf("stringlength problem\n");
-        return -1;
-    }
     if (!checkLegalName(fullName))
     {
         printf("split: illegal name\n");
@@ -621,24 +614,29 @@ int cpmCopy(char *oldName, char *newName)
     // get block 0
     int oldLine = -1;
     int newLine = -1;
-    uint8_t buffer[BLOCK_SIZE] = {0};
-    uint8_t *buffer_p = NULL;
-    buffer_p = (uint8_t *)&buffer;
+    uint8_t *buffer_p = (u_int8_t *)(malloc(BLOCK_SIZE * sizeof(u_int8_t))); 
     blockRead(buffer_p, 0);
+    //printf("finished getblock0\n");
     // check if newname already in use, if not, find an unused line
-    newLine = findExtentWithName(newName, buffer_p);
+    char newName2[13] = "";
+    normalizeName(newName, newName2);
+    newLine = findExtentWithName(newName2, buffer_p);
     if (newLine != -1)
         return -3;
     bool openLine = false;
     while (newLine < 16 && !openLine) {
         newLine++;
-        if (buffer[newLine * EXTENT_SIZE] == 0x58) openLine = true;
+        if (buffer_p[newLine * EXTENT_SIZE] == 0xe5) openLine = true;
     }
     if (!openLine) return -4;
     // find the oldname line
-    oldLine = findExtentWithName(oldName, buffer_p);
-    if (oldLine == -1)
+    char oldName2[13] = "";
+    normalizeName(oldName, oldName2);
+    oldLine = findExtentWithName(oldName2, buffer_p);
+    if (oldLine == -1) {
+        printf("can't find oldName %s\n", oldName);
         return -1;
+    }
     // create an extent from the oldLine number
     DirStructType *oldEntry_p = mkDirStruct(oldLine, buffer_p);
     // count the number of blocks
@@ -664,13 +662,17 @@ int cpmCopy(char *oldName, char *newName)
         return -4;
     // create an extent for newName using available blocks
     DirStructType *newEntry_p = (DirStructType *)malloc(sizeof(DirStructType));
-    splitOutName(newEntry_p->name, newEntry_p->extension, newName);
+    printf("XL %d XH %d\n",oldEntry_p->XL, oldEntry_p->XH);
+    splitOutName(newEntry_p->name, newEntry_p->extension, newName2);
     // copy all info from old to new except blocks
+    printf("XL %d XH %d\n",oldEntry_p->XL, oldEntry_p->XH);
     newEntry_p->status = oldEntry_p->status;
     newEntry_p->XL = oldEntry_p->XL;
     newEntry_p->BC = oldEntry_p->BC;
     newEntry_p->XH = oldEntry_p->XH;
     newEntry_p->RC = oldEntry_p->RC;
+    printf("XL %d XH %d\n",newEntry_p->XL, newEntry_p->XH);
+    printf("XL %d XH %d\n",oldEntry_p->XL, oldEntry_p->XH);
     // create a new blocklist in the new extent
     int freeBlock = 0;
     int newBlock = 0;
@@ -679,9 +681,9 @@ int cpmCopy(char *oldName, char *newName)
         if (freeList[freeBlock])
         {
             newEntry_p->blocks[newBlock] = freeBlock;
+            newBlock++;
         }
         freeBlock++;
-        newBlock++;
     }
     // copy block data from old to new
     uint8_t *dataBuffer_p = (u_int8_t *)(malloc(BLOCK_SIZE * sizeof(u_int8_t))); 
@@ -697,6 +699,10 @@ int cpmCopy(char *oldName, char *newName)
     writeDirStruct(newEntry_p, newLine, buffer_p);
     blockWrite(buffer_p,0);
     // find
+    free(oldEntry_p);
+    free(newEntry_p);
+    free(buffer_p);
+    free(dataBuffer_p);
     return 0;
 }
 
