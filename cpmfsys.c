@@ -143,6 +143,7 @@ void makeFreeList()
     }
     //printf("zeroed freelist\n");
     // go through each directory entry
+    //int block = 0;
     for (int i = 0; i < NUM_EXTENTS; i++)
     {
         //printf("entry %d\n", i);
@@ -152,18 +153,21 @@ void makeFreeList()
         //printf("entry %d\n", i);
         if (entry_p->status >= 0 && entry_p->status <= 15)
         {
+            //printf("filename: %s.%s", entry_p->name, entry_p->extension);
             for (int j = 0; j < BLOCKS_PER_EXTENT; j++)
             {
-                //printf("%x ", i * NUM_EXTENTS + j);
+                //block = i * NUM_EXTENTS + j;
+                //printf("%x ", block);
                 if (entry_p->blocks[j] != 0x00)
                 {
-                    freeList[i * NUM_EXTENTS + j] = false;
+                    freeList[entry_p->blocks[j]] = false;
                 }
             }
         }
         //printf("\n");
         free(entry_p);
     }
+    freeList[0] = false;
     return;
 }
 
