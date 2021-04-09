@@ -5,7 +5,7 @@ diskSimulator.o: diskSimulator.c diskSimulator.h
 	gcc -g -Wall -Werror -c diskSimulator.c
 
 cpmfsys.o: cpmfsys.h cpmfsys.c 
-	gcc -g -Wall -Werror -c cpmfsys.c  
+	gcc -g  -std=c99 -Wall -Werror -c cpmfsys.c  
 
 fsystest.o: fsystest.c
 	gcc -g -Wall -Werror -c fsystest.c
