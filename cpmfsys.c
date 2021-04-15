@@ -3,6 +3,14 @@
 
 #define NUM_EXTENTS 16
 
+// update the free list with newly freed blocks, inputs are a pointer to a DirStruct.
+// adds the 16 blocks in the extent block array to the freelist, unless it is block 0x00
+int freeBlocksFreeList(DirStructType *entry_p);
+
+// update the free list with newly added blocks, inputs are a pointer to a DirStruct.
+// adds the 16 blocks in the extent block array to the freelist, unless it is block 0x00
+int addBlocksFreeList(DirStructType *entry_p);
+
 // internal function, returns -1 for illegal name or name not found
 // otherwise returns extent nunber 0-31
 int findExtentWithName(char *name, uint8_t *block0);
@@ -163,13 +171,39 @@ void makeFreeList()
     return;
 }
 
+// update the free list with newly freed blocks, inputs are a pointer to a DirStruct.
+// adds the 16 blocks in the extent block array to the freelist, unless it is block 0x00
+int freeBlocksFreeList(DirStructType *entry_p) {
+    if (entry_p->blocks == NULL) return -1;
+    for (int i = 0; i < BLOCKS_PER_EXTENT; i++) {
+        if (entry_p->blocks[i] != 0) {
+            // remove from freelist by marking true
+            freeList[entry_p->blocks[i]] = true;
+        }
+    }
+    return 0;
+}
+
+// update the free list with newly added blocks, inputs are a pointer to a DirStruct.
+// adds the 16 blocks in the extent block array to the freelist, unless it is block 0x00
+int addBlocksFreeList(DirStructType *entry_p) {
+    if (entry_p->blocks == NULL) return -1;
+    for (int i = 0; i < BLOCKS_PER_EXTENT; i++) {
+        if (entry_p->blocks[i] != 0) {
+            // remove from freelist by marking false
+            freeList[entry_p->blocks[i]] = false;
+        }
+    }
+    return 0;
+}
+
 // debugging function, print out the contents of the free list in 16 rows of 16, with each
 // row prefixed by the 2-digit hex address of the first block in that row. Denote a used
 // block with a *, a free block with a .
 void printFreeList()
 {
     //printf("call makefreelist\n");
-    makeFreeList();
+    //makeFreeList();
     //printf("completed makefreelist\n");
     printf("FREE BLOCK LIST: (* means in-use)\n ");
     for (int i = 0; i < NUM_EXTENTS; i++)
@@ -512,9 +546,7 @@ int cpmDelete(char *name)
     //printf("cpmdelete name2: %s\n", name2);
     // get block 0
     int line = -1;
-    uint8_t buffer[BLOCK_SIZE] = {0};
-    uint8_t *buffer_p = NULL;
-    buffer_p = (uint8_t *)&buffer;
+    uint8_t *buffer_p = (uint8_t *)(malloc(BLOCK_SIZE * sizeof(uint8_t)));
     blockRead(buffer_p, 0);
     // find the line
     line = findExtentWithName(name2, buffer_p);
@@ -524,14 +556,25 @@ int cpmDelete(char *name)
         //printf("name not in directory\n");
         return -1;
     }
+    // load the extent using line to be able to free blocks
+    DirStructType *entry_p = mkDirStruct(line, buffer_p);
+    freeBlocksFreeList(entry_p);
+    // zero out extent
+    *entry_p = (DirStructType){0};
+    // update extent status
+    entry_p->status = 0xe5;
+    // write extent to block0
+    writeDirStruct(entry_p, line, buffer_p);
     //write directly to the fricking block
-    buffer_p[line * EXTENT_SIZE] = 0xe5;
-    for (int i = 1; i < EXTENT_SIZE; i++)
-    {
-        buffer_p[line * EXTENT_SIZE + i] = 0x00;
-    }
-    // write to block 0
+    //buffer_p[line * EXTENT_SIZE] = 0xe5;
+    //for (int i = 1; i < EXTENT_SIZE; i++)
+    //{
+    //    buffer_p[line * EXTENT_SIZE + i] = 0x00;
+    //}
+    // write to block 0 on image
     blockWrite(buffer_p, 0);
+    free(entry_p);
+    free(buffer_p);
     return 0;
 }
 
@@ -651,6 +694,9 @@ int cpmCopy(char *oldName, char *newName)
     }
     // write new extent to newLine
     writeDirStruct(newEntry_p, newLine, buffer_p);
+    // update freelist
+    addBlocksFreeList(newEntry_p);
+    // write to the disc image
     blockWrite(buffer_p, 0);
     // find
     free(oldEntry_p);

@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   //uint8_t buffer1[BLOCK_SIZE],buffer2[BLOCK_SIZE];
   //int i;
   readImage("image1.img");
-  //makeFreeList();
+  makeFreeList();
   printFreeList();
   cpmDir();
   char testname[13] = "testfil1.std";
@@ -87,7 +87,6 @@ printf("%s\n", checkLegalName(testname) ? "true" : "false");
   cpmDir();
   cpmRename("mytestf2.new", "gob");
   cpmDir();
-  makeFreeList();
   printFreeList();
   cpmDelete("shortf.ps");
   cpmDir();
